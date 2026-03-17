@@ -1,47 +1,49 @@
 -- ╔══════════════════════════════════════════════════════════╗
--- ║         OBSIDIAN REMAKE — Example Script                ║
--- ║   Demonstrates semua fitur yang tersedia                ║
+-- ║        OBSIDIAN REMAKE — Example Script  v1.0.1         ║
+-- ║   Full Lua 5.1 Compatible — Delta/Solara/Synapse        ║
 -- ╚══════════════════════════════════════════════════════════╝
 
--- Load Library
-local repo    = "https://raw.githubusercontent.com/YOUR_USERNAME/ObsidianRemake/main/"
--- Atau load dari file lokal (di Roblox Studio):
-local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+-- ── Load Library ─────────────────────────────────────────────
+local repo = "https://raw.githubusercontent.com/Obsydiee/ObsidianRemake/refs/heads/main/"
 
--- Atau di Studio, require langsung:
--- local Library = require(script.Library)
+local Library      = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local SaveManager  = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
 
 local Options = Library.Options
 local Toggles = Library.Toggles
 
--- ──────────────────────────────────────────────────────────────
--- BUAT WINDOW
--- ──────────────────────────────────────────────────────────────
+-- ── Setup SaveManager & ThemeManager ─────────────────────────
+SaveManager:SetLibrary(Library)
+SaveManager:SetFolder("ObsidianRemake")
+SaveManager:IgnoreElements("SaveManager_ConfigName", "SaveManager_ConfigList", "ThemeManager_Theme")
+
+ThemeManager:SetLibrary(Library)
+ThemeManager:SetFolder("ObsidianRemake")
+
+-- ── Buat Window ──────────────────────────────────────────────
 local Window = Library:CreateWindow({
-    Title        = "Obsidian Remake",
-    Footer       = "v1.0.0 · Example",
+    Title         = "Obsidian Remake",
+    Footer        = "v1.0.1",
     ToggleKeybind = Enum.KeyCode.RightControl,
-    Center       = true,
-    AutoShow     = true,
-    Size         = UDim2.fromOffset(720, 500),
+    Center        = true,
+    AutoShow      = true,
+    Size          = UDim2.fromOffset(720, 500),
 })
 
--- ──────────────────────────────────────────────────────────────
--- TABS
--- ──────────────────────────────────────────────────────────────
-local MainTab     = Window:AddTab("Main",     "home")
-local CombatTab   = Window:AddTab("Combat",   "sword")
-local VisualTab   = Window:AddTab("Visual",   "eye")
-local MiscTab     = Window:AddTab("Misc",     "wrench")
-local SettingsTab = Window:AddTab("Settings", "settings")
+-- ── Buat Tabs ────────────────────────────────────────────────
+local MainTab     = Window:AddTab("Main")
+local CombatTab   = Window:AddTab("Combat")
+local VisualTab   = Window:AddTab("Visual")
+local MiscTab     = Window:AddTab("Misc")
+local SettingsTab = Window:AddTab("Settings")
 
--- ──────────────────────────────────────────────────────────────
--- MAIN TAB — Groupboxes
--- ──────────────────────────────────────────────────────────────
+-- ─────────────────────────────────────────────────────────────
+-- MAIN TAB
+-- ─────────────────────────────────────────────────────────────
 local LeftBox  = MainTab:AddLeftGroupbox("Player")
 local RightBox = MainTab:AddRightGroupbox("Info")
 
--- ── Toggles ──
 LeftBox:AddToggle("GodMode", {
     Text    = "God Mode",
     Default = false,
@@ -60,7 +62,6 @@ LeftBox:AddToggle("InfiniteJump", {
     Default = false,
 })
 
--- ── Slider ──
 LeftBox:AddSlider("WalkSpeed", {
     Text     = "Walk Speed",
     Default  = 16,
@@ -78,17 +79,15 @@ LeftBox:AddSlider("JumpPower", {
     Rounding = 0,
 })
 
--- ── Divider ──
 LeftBox:AddDivider()
 
--- ── Button ──
 LeftBox:AddButton({
     Text    = "Teleport to Spawn",
     Tooltip = "Teleport ke spawn point",
     Func    = function()
         Library:Notify({
-            Title   = "Teleport",
-            Content = "Teleporting to spawn...",
+            Title    = "Teleport",
+            Content  = "Teleporting to spawn...",
             Duration = 3,
         })
     end,
@@ -107,22 +106,20 @@ LeftBox:AddButton({
     end,
 })
 
--- ── Right side ──
-RightBox:AddLabel("Obsidian Remake v1.0.0", false)
-RightBox:AddLabel("Sebuah UI Library untuk Roblox\nyang terinspirasi dari Obsidian.\n\nFitur:\n• Toggle, Slider, Dropdown\n• Input, ColorPicker, Keybind\n• Tabbox, Notifikasi", true)
-
+RightBox:AddLabel("Obsidian Remake v1.0.1", false)
+RightBox:AddLabel(
+    "UI Library untuk Roblox\nterinspirasi dari Obsidian.\n\nFitur:\n- Toggle & Checkbox\n- Slider, Button, Dropdown\n- Input, ColorPicker, Keybind\n- Tabbox & Notifikasi",
+    true
+)
 RightBox:AddDivider()
-
--- Status label yang bisa di-update
 local statusLabel = RightBox:AddLabel("Status: Idle")
 
--- ──────────────────────────────────────────────────────────────
+-- ─────────────────────────────────────────────────────────────
 -- COMBAT TAB
--- ──────────────────────────────────────────────────────────────
+-- ─────────────────────────────────────────────────────────────
 local CombatLeft  = CombatTab:AddLeftGroupbox("Aimbot")
 local CombatRight = CombatTab:AddRightGroupbox("Combat")
 
--- Toggle dengan ColorPicker (menggunakan Tabbox)
 CombatLeft:AddToggle("AimbotEnabled", {
     Text    = "Aimbot",
     Default = false,
@@ -134,7 +131,7 @@ CombatLeft:AddSlider("AimbotFOV", {
     Min      = 10,
     Max      = 400,
     Rounding = 0,
-    Suffix   = "°",
+    Suffix   = " deg",
 })
 
 CombatLeft:AddSlider("AimbotSmooth", {
@@ -146,7 +143,7 @@ CombatLeft:AddSlider("AimbotSmooth", {
 })
 
 CombatLeft:AddDropdown("AimbotPart", {
-    Text   = "Target Part",
+    Text    = "Target Part",
     Default = "Head",
     Values  = { "Head", "HumanoidRootPart", "Torso", "LeftArm", "RightArm" },
 })
@@ -171,22 +168,27 @@ CombatRight:AddToggle("AutoShoot", {
     Default = false,
 })
 
+CombatRight:AddCheckbox("PredictMovement", {
+    Text    = "Predict Movement",
+    Default = false,
+})
+
 CombatRight:AddDivider()
 
 CombatRight:AddButton({
-    Text = "Notify Test",
+    Text = "Notify FOV",
     Func = function()
         Library:Notify({
             Title    = "Combat",
-            Content  = "Aimbot aktif! FOV: " .. tostring(Options.AimbotFOV.Value),
-            Duration = 4,
+            Content  = "FOV saat ini: " .. tostring(Options.AimbotFOV.Value),
+            Duration = 3,
         })
     end,
 })
 
--- ──────────────────────────────────────────────────────────────
--- VISUAL TAB — ESP & Colorpickers
--- ──────────────────────────────────────────────────────────────
+-- ─────────────────────────────────────────────────────────────
+-- VISUAL TAB
+-- ─────────────────────────────────────────────────────────────
 local VisualLeft  = VisualTab:AddLeftGroupbox("ESP")
 local VisualRight = VisualTab:AddRightGroupbox("Chams")
 
@@ -235,7 +237,7 @@ VisualRight:AddColorpicker("ChamsColor", {
 })
 
 VisualRight:AddDropdown("ChamsMaterial", {
-    Text   = "Material",
+    Text    = "Material",
     Default = "Neon",
     Values  = { "Neon", "ForceField", "Glass", "SmoothPlastic" },
 })
@@ -245,26 +247,23 @@ VisualRight:AddToggle("Fullbright", {
     Default = false,
 })
 
--- ──────────────────────────────────────────────────────────────
--- MISC TAB — Dropdown, Input, Keybind
--- ──────────────────────────────────────────────────────────────
+-- ─────────────────────────────────────────────────────────────
+-- MISC TAB
+-- ─────────────────────────────────────────────────────────────
 local MiscLeft  = MiscTab:AddLeftGroupbox("Utilities")
 local MiscRight = MiscTab:AddRightGroupbox("Input & Keybinds")
 
--- Dropdown single
 MiscLeft:AddDropdown("GameMode", {
-    Text       = "Game Mode",
-    Default    = "Normal",
-    Values     = { "Normal", "Creative", "Spectator", "Hardcore" },
-    Searchable = false,
+    Text    = "Game Mode",
+    Default = "Normal",
+    Values  = { "Normal", "Creative", "Spectator", "Hardcore" },
 })
 
--- Dropdown multi
 MiscLeft:AddDropdown("ActiveFeatures", {
-    Text   = "Active Features",
-    Default = { "ESP", "Speed" },
-    Values  = { "ESP", "Speed", "Fly", "Noclip", "Aimbot", "Chams" },
-    Multi  = true,
+    Text       = "Active Features",
+    Default    = { "ESP", "Speed" },
+    Values     = { "ESP", "Speed", "Fly", "Noclip", "Aimbot", "Chams" },
+    Multi      = true,
     Searchable = true,
 })
 
@@ -284,7 +283,6 @@ MiscLeft:AddSlider("FarmDelay", {
     Suffix   = "s",
 })
 
--- Input
 MiscRight:AddInput("TargetPlayer", {
     Text        = "Target Player",
     Default     = "",
@@ -302,7 +300,6 @@ MiscRight:AddInput("TeleportX", {
 
 MiscRight:AddDivider()
 
--- Keybinds
 MiscRight:AddKeybind("FlyKey", {
     Text    = "Fly Toggle",
     Default = Enum.KeyCode.F,
@@ -321,15 +318,12 @@ MiscRight:AddKeybind("NoclipKey", {
     Mode    = "Toggle",
 })
 
--- ──────────────────────────────────────────────────────────────
--- SETTINGS TAB — Tabbox example
--- ──────────────────────────────────────────────────────────────
-local SettingsLeft  = SettingsTab:AddLeftGroupbox("UI Settings")
+-- ─────────────────────────────────────────────────────────────
+-- SETTINGS TAB
+-- SaveManager & ThemeManager otomatis buat UI di sini
+-- ─────────────────────────────────────────────────────────────
+local SettingsLeft  = SettingsTab:AddLeftGroupbox("General")
 local SettingsRight = SettingsTab:AddRightGroupbox("About")
-
--- Tabbox dalam Settings
-local SettingsTabbox = SettingsLeft:AddLeftTabbox and nil
--- (Tabbox on a Groupbox via parent column)
 
 SettingsLeft:AddToggle("ShowCustomCursor", {
     Text    = "Custom Cursor",
@@ -356,23 +350,36 @@ SettingsLeft:AddButton({
     end,
 })
 
-SettingsRight:AddLabel("Obsidian Remake", false)
-SettingsRight:AddLabel("Version: 1.0.0\nAuthor: Your Name\nInspired by: deividcomsono/Obsidian\n\nGitHub: github.com/YOUR_USERNAME/ObsidianRemake", true)
+-- SaveManager build UI (kiri, di bawah General)
+SaveManager:BuildConfigSection(SettingsTab)
 
--- ──────────────────────────────────────────────────────────────
--- OnChanged callbacks — SELALU di bawah deklarasi UI
--- ──────────────────────────────────────────────────────────────
+-- ThemeManager build UI (kanan)
+ThemeManager:ApplyToTab(SettingsTab)
+
+SettingsRight:AddLabel("Obsidian Remake", false)
+SettingsRight:AddLabel(
+    "Version  : 1.0.1\nAuthor   : Obsydiee\nInspired : deividcomsono\n\nGitHub   : github.com/Obsydiee/ObsidianRemake",
+    true
+)
+
+-- ─────────────────────────────────────────────────────────────
+-- OnChanged Callbacks
+-- PENTING: selalu taruh di BAWAH semua deklarasi UI
+-- ─────────────────────────────────────────────────────────────
 Toggles.GodMode:OnChanged(function(value)
-    -- Contoh: set MaxHealth sangat tinggi
     local char = game.Players.LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then
-        char.Humanoid.MaxHealth = value and math.huge or 100
-        char.Humanoid.Health    = value and math.huge or 100
+        if value then
+            char.Humanoid.MaxHealth = math.huge
+            char.Humanoid.Health    = math.huge
+        else
+            char.Humanoid.MaxHealth = 100
+            char.Humanoid.Health    = 100
+        end
     end
 end)
 
 Toggles.InfiniteJump:OnChanged(function(value)
-    -- Implementasi infinite jump
     if value then
         game:GetService("UserInputService").JumpRequest:Connect(function()
             local char = game.Players.LocalPlayer.Character
@@ -405,12 +412,33 @@ Options.NoclipKey:OnClick(function()
     Toggles.Noclip:SetValue(not Toggles.Noclip.Value)
 end)
 
--- ──────────────────────────────────────────────────────────────
--- Welcome notification
--- ──────────────────────────────────────────────────────────────
-task.wait(1)
+Options.SprintKey:OnClick(function()
+    -- Hold mode: OnClick = saat tombol ditekan
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.WalkSpeed = 50
+    end
+end)
+
+Options.UIOpacity:OnChanged(function(value)
+    -- Sesuaikan transparansi window
+    local win = Library._Window
+    if win then
+        win.BackgroundTransparency = 1 - (value / 100)
+    end
+end)
+
+Toggles.AimbotEnabled:OnChanged(function(value)
+    statusLabel:SetText("Status: " .. (value and "Aimbot ON" or "Idle"))
+end)
+
+-- ── Muat config autoload terakhir ────────────────────────────
+SaveManager:LoadAutoloadConfig()
+
+-- ── Welcome notif ────────────────────────────────────────────
+task.wait(0.5)
 Library:Notify({
     Title    = "Obsidian Remake",
-    Content  = "Script berhasil diload! Tekan RightCtrl untuk toggle UI.",
+    Content  = "Script loaded! Tekan RightCtrl untuk toggle UI.",
     Duration = 5,
 })
