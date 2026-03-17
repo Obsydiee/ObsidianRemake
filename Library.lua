@@ -1,27 +1,33 @@
 -- ╔══════════════════════════════════════════════════════════╗
--- ║          OBSIDIAN REMAKE UI LIBRARY  v1.0.0             ║
+-- ║          OBSIDIAN REMAKE UI LIBRARY  v1.0.1             ║
 -- ║       Inspired by Obsidian (deividcomsono/Obsidian)     ║
--- ║       Clean, modular Roblox UI Library                  ║
+-- ║       Full Lua 5.1 Compatible (Delta/Solara/Synapse)    ║
 -- ╚══════════════════════════════════════════════════════════╝
 
 local Library = {
-    Version  = "1.0.0",
-    Name     = "ObsidianRemake",
-    Toggles  = {},   -- indexed by string key
-    Options  = {},   -- indexed by string key
-    _Window  = nil,
+    Version   = "1.0.1",
+    Name      = "ObsidianRemake",
+    Toggles   = {},
+    Options   = {},
+    _Window   = nil,
     _ScreenGui = nil,
 }
 
--- ─── Services ────────────────────────────────────────────────────────────────
-local Players        = game:GetService("Players")
-local TweenService   = game:GetService("TweenService")
-local UIS            = game:GetService("UserInputService")
-local RunService     = game:GetService("RunService")
-local TextService    = game:GetService("TextService")
-local LocalPlayer    = Players.LocalPlayer
+-- Services
+local Players      = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UIS          = game:GetService("UserInputService")
+local LocalPlayer  = Players.LocalPlayer
 
--- ─── Theme ───────────────────────────────────────────────────────────────────
+-- Lua 5.1 polyfill: table.find tidak ada di Lua 5.1
+local function TableFind(tbl, val)
+    for i, v in ipairs(tbl) do
+        if v == val then return i end
+    end
+    return nil
+end
+
+-- Theme
 Library.Theme = {
     Background   = Color3.fromRGB(14, 14, 21),
     Header       = Color3.fromRGB(20, 20, 32),
@@ -29,7 +35,6 @@ Library.Theme = {
     TabActive    = Color3.fromRGB(30, 22, 52),
     TabInactive  = Color3.fromRGB(22, 22, 34),
     Accent       = Color3.fromRGB(124, 58, 237),
-    AccentHover  = Color3.fromRGB(139, 92, 246),
     GroupBG      = Color3.fromRGB(18, 18, 28),
     GroupBorder  = Color3.fromRGB(40, 40, 62),
     GroupHeader  = Color3.fromRGB(22, 22, 36),
@@ -44,7 +49,6 @@ Library.Theme = {
     SliderBG     = Color3.fromRGB(36, 36, 56),
     Divider      = Color3.fromRGB(36, 36, 56),
     Red          = Color3.fromRGB(239, 68, 68),
-    Green        = Color3.fromRGB(74, 222, 128),
     White        = Color3.fromRGB(255, 255, 255),
     Scrollbar    = Color3.fromRGB(60, 60, 90),
     Dropdown     = Color3.fromRGB(16, 16, 26),
@@ -53,11 +57,14 @@ Library.Theme = {
     NotifAccent  = Color3.fromRGB(124, 58, 237),
 }
 
--- ─── Helpers ─────────────────────────────────────────────────────────────────
+-- Helpers
 local function Tween(obj, goal, t, style, dir)
     TweenService:Create(obj,
-        TweenInfo.new(t or 0.15, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out),
-        goal
+        TweenInfo.new(
+            t     or 0.15,
+            style or Enum.EasingStyle.Quad,
+            dir   or Enum.EasingDirection.Out
+        ), goal
     ):Play()
 end
 
@@ -76,7 +83,7 @@ end
 
 local function AddStroke(parent, color, thickness)
     return New("UIStroke", {
-        Color     = color or Library.Theme.GroupBorder,
+        Color     = color     or Library.Theme.GroupBorder,
         Thickness = thickness or 1,
     }, parent)
 end
@@ -90,11 +97,19 @@ local function AddPadding(parent, top, bottom, left, right)
     }, parent)
 end
 
+-- Lua 5.1: math.pow, bukan **
+local function RoundNum(n, dec)
+    local m = math.pow(10, dec or 0)
+    return math.floor(n * m + 0.5) / m
+end
+
 local function MakeDraggable(frame, handle)
-    local dragging, startFramePos, startMousePos
+    local dragging      = false
+    local startFramePos = nil
+    local startMousePos = nil
     handle.InputBegan:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
+            dragging       = true
             startFramePos  = frame.Position
             startMousePos  = i.Position
         end
@@ -106,27 +121,21 @@ local function MakeDraggable(frame, handle)
     end)
     UIS.InputChanged:Connect(function(i)
         if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-            local d = i.Position - startMousePos
+            local dx = i.Position.X - startMousePos.X
+            local dy = i.Position.Y - startMousePos.Y
             frame.Position = UDim2.new(
-                startFramePos.X.Scale, startFramePos.X.Offset + d.X,
-                startFramePos.Y.Scale, startFramePos.Y.Offset + d.Y
+                startFramePos.X.Scale, startFramePos.X.Offset + dx,
+                startFramePos.Y.Scale, startFramePos.Y.Offset + dy
             )
         end
     end)
 end
 
-local function RoundNum(n, dec)
-    local m = 10^(dec or 0)
-    return math.floor(n * m + 0.5) / m
-end
-
--- ─── Tooltip helper ──────────────────────────────────────────────────────────
 local function AttachTooltip(element, text)
     if not text or text == "" then return end
-    local T = Library.Theme
+    local T  = Library.Theme
     local sg = Library._ScreenGui
     if not sg then return end
-
     local tip = New("Frame", {
         BackgroundColor3 = T.Dropdown,
         BorderSizePixel  = 0,
@@ -138,17 +147,16 @@ local function AttachTooltip(element, text)
     AddCorner(tip, 5)
     AddStroke(tip, T.GroupBorder, 1)
     New("TextLabel", {
-        Text           = text,
-        Font           = Enum.Font.Gotham,
-        TextSize       = 11,
-        TextColor3     = T.TextDim,
+        Text                   = text,
+        Font                   = Enum.Font.Gotham,
+        TextSize               = 11,
+        TextColor3             = T.TextDim,
         BackgroundTransparency = 1,
-        Size           = UDim2.new(0, 0, 0, 0),
-        AutomaticSize  = Enum.AutomaticSize.XY,
-        ZIndex         = 101,
+        Size                   = UDim2.new(0, 0, 0, 0),
+        AutomaticSize          = Enum.AutomaticSize.XY,
+        ZIndex                 = 101,
     }, tip)
     AddPadding(tip, 4, 4, 8, 8)
-
     element.MouseMoved:Connect(function(x, y)
         tip.Position = UDim2.new(0, x + 14, 0, y + 14)
         tip.Visible  = true
@@ -158,22 +166,20 @@ local function AttachTooltip(element, text)
     end)
 end
 
--- ─── GROUPBOX ────────────────────────────────────────────────────────────────
+-- GROUPBOX
 local Groupbox = {}
 Groupbox.__index = Groupbox
 
 function Groupbox.new(name, parent)
-    local T = Library.Theme
+    local T    = Library.Theme
     local self = setmetatable({}, Groupbox)
 
-    -- Outer wrapper
     local wrapper = New("Frame", {
         BackgroundTransparency = 1,
-        Size     = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
+        Size                   = UDim2.new(1, 0, 0, 0),
+        AutomaticSize          = Enum.AutomaticSize.Y,
     }, parent)
 
-    -- Box
     local box = New("Frame", {
         BackgroundColor3 = T.GroupBG,
         BorderSizePixel  = 0,
@@ -183,7 +189,6 @@ function Groupbox.new(name, parent)
     AddCorner(box, 8)
     AddStroke(box, T.GroupBorder, 1)
 
-    -- Header
     local header = New("Frame", {
         BackgroundColor3 = T.GroupHeader,
         BorderSizePixel  = 0,
@@ -192,61 +197,53 @@ function Groupbox.new(name, parent)
     }, box)
     New("UICorner", { CornerRadius = UDim.new(0, 7) }, header)
 
-    -- Title in header
     New("TextLabel", {
-        Text           = name,
-        Font           = Enum.Font.GothamBold,
-        TextSize       = 12,
-        TextColor3     = T.Text,
+        Text                   = name,
+        Font                   = Enum.Font.GothamBold,
+        TextSize               = 12,
+        TextColor3             = T.Text,
         BackgroundTransparency = 1,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Size           = UDim2.new(1, -36, 1, 0),
-        Position       = UDim2.new(0, 10, 0, 0),
-        ZIndex         = 3,
+        TextXAlignment         = Enum.TextXAlignment.Left,
+        Size                   = UDim2.new(1, -36, 1, 0),
+        Position               = UDim2.new(0, 10, 0, 0),
+        ZIndex                 = 3,
     }, header)
 
-    -- Collapse button
     local collapseBtn = New("TextButton", {
-        Text            = "−",
-        Font            = Enum.Font.GothamBold,
-        TextSize        = 14,
-        TextColor3      = T.TextDim,
+        Text                   = "-",
+        Font                   = Enum.Font.GothamBold,
+        TextSize               = 14,
+        TextColor3             = T.TextDim,
         BackgroundTransparency = 1,
-        Size            = UDim2.new(0, 28, 0, 28),
-        Position        = UDim2.new(1, -30, 0.5, -14),
-        ZIndex          = 3,
+        Size                   = UDim2.new(0, 28, 0, 28),
+        Position               = UDim2.new(1, -30, 0.5, -14),
+        ZIndex                 = 3,
     }, header)
 
-    -- Content frame
     local content = New("Frame", {
         BackgroundTransparency = 1,
-        BorderSizePixel  = 0,
-        Size             = UDim2.new(1, 0, 0, 0),
-        Position         = UDim2.new(0, 0, 0, 30),
-        AutomaticSize    = Enum.AutomaticSize.Y,
-        ClipsDescendants = false,
+        BorderSizePixel        = 0,
+        Size                   = UDim2.new(1, 0, 0, 0),
+        Position               = UDim2.new(0, 0, 0, 30),
+        AutomaticSize          = Enum.AutomaticSize.Y,
+        ClipsDescendants       = false,
     }, box)
     AddPadding(content, 6, 8, 6, 6)
-
-    -- List layout for elements
-    local list = New("UIListLayout", {
-        SortOrder  = Enum.SortOrder.LayoutOrder,
-        Padding    = UDim.new(0, 4),
+    New("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding   = UDim.new(0, 4),
     }, content)
 
-    -- Collapse logic
     local collapsed = false
     collapseBtn.MouseButton1Click:Connect(function()
-        collapsed = not collapsed
-        collapseBtn.Text = collapsed and "+" or "−"
-        content.Visible = not collapsed
+        collapsed        = not collapsed
+        collapseBtn.Text = collapsed and "+" or "-"
+        content.Visible  = not collapsed
         Tween(box, { BackgroundTransparency = collapsed and 0.3 or 0 }, 0.15)
     end)
 
     self._box     = box
     self._content = content
-    self._list    = list
-
     return self
 end
 
@@ -254,35 +251,31 @@ function Groupbox:_AddElement(elem)
     elem.Parent = self._content
 end
 
--- ─── LABEL ───────────────────────────────────────────────────────────────────
 function Groupbox:AddLabel(text, doesWrap)
-    local T = Library.Theme
+    local T   = Library.Theme
     local cfg = type(text) == "table" and text or { Text = text }
     local lbl = New("TextLabel", {
-        Text           = cfg.Text or "",
-        Font           = Enum.Font.Gotham,
-        TextSize       = 12,
-        TextColor3     = T.TextDim,
+        Text                   = cfg.Text or "",
+        Font                   = Enum.Font.Gotham,
+        TextSize               = 12,
+        TextColor3             = T.TextDim,
         BackgroundTransparency = 1,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextWrapped    = cfg.DoesWrap or doesWrap or false,
-        Size           = UDim2.new(1, -4, 0, 0),
-        AutomaticSize  = Enum.AutomaticSize.Y,
+        TextXAlignment         = Enum.TextXAlignment.Left,
+        TextWrapped            = cfg.DoesWrap or doesWrap or false,
+        Size                   = UDim2.new(1, -4, 0, 0),
+        AutomaticSize          = Enum.AutomaticSize.Y,
     })
     AddPadding(lbl, 1, 1, 2, 2)
     self:_AddElement(lbl)
-
     return {
-        SetText = function(_, t) lbl.Text = t end,
+        SetText  = function(_, t) lbl.Text = t end,
         Instance = lbl,
     }
 end
 
--- ─── DIVIDER ─────────────────────────────────────────────────────────────────
 function Groupbox:AddDivider()
-    local T = Library.Theme
     local div = New("Frame", {
-        BackgroundColor3 = T.Divider,
+        BackgroundColor3 = Library.Theme.Divider,
         BorderSizePixel  = 0,
         Size             = UDim2.new(1, -8, 0, 1),
     })
@@ -291,15 +284,14 @@ function Groupbox:AddDivider()
     return div
 end
 
--- ─── BUTTON ──────────────────────────────────────────────────────────────────
 function Groupbox:AddButton(cfg)
     cfg = cfg or {}
     local T        = Library.Theme
-    local text     = cfg.Text    or "Button"
-    local func     = cfg.Func    or function() end
+    local text     = cfg.Text        or "Button"
+    local func     = cfg.Func        or function() end
     local tooltip  = cfg.Tooltip
     local dblClick = cfg.DoubleClick or false
-    local disabled = cfg.Disabled   or false
+    local disabled = cfg.Disabled    or false
 
     local btn = New("TextButton", {
         Text             = text,
@@ -313,7 +305,6 @@ function Groupbox:AddButton(cfg)
     })
     AddCorner(btn, 6)
     AddStroke(btn, T.GroupBorder, 1)
-
     if tooltip then AttachTooltip(btn, tooltip) end
 
     local clickCount = 0
@@ -327,10 +318,11 @@ function Groupbox:AddButton(cfg)
         end)
         btn.MouseButton1Click:Connect(function()
             if dblClick then
+                -- Lua 5.1: clickCount = clickCount + 1, bukan +=
                 clickCount = clickCount + 1
                 if clickCount < 2 then
                     btn.TextColor3 = T.TextDim
-                    btn.Text       = "Click again to confirm"
+                    btn.Text       = "Click again!"
                     task.delay(2, function()
                         if clickCount < 2 then
                             btn.Text       = text
@@ -341,8 +333,8 @@ function Groupbox:AddButton(cfg)
                     return
                 end
             end
-            clickCount = 0
-            btn.Text   = text
+            clickCount     = 0
+            btn.Text       = text
             btn.TextColor3 = T.Text
             Tween(btn, { BackgroundColor3 = T.Accent }, 0.07)
             task.wait(0.07)
@@ -353,43 +345,36 @@ function Groupbox:AddButton(cfg)
     end
 
     self:_AddElement(btn)
-
     local btnObj = { _parent = self, _instance = btn }
-    function btnObj:AddButton(cfg2)
-        return self._parent:AddButton(cfg2)
-    end
+    function btnObj:AddButton(cfg2) return self._parent:AddButton(cfg2) end
     return btnObj
 end
 
--- ─── TOGGLE ──────────────────────────────────────────────────────────────────
 function Groupbox:AddToggle(index, cfg)
     cfg = cfg or {}
-    local T       = Library.Theme
-    local text    = cfg.Text    or index
-    local value   = cfg.Default ~= nil and cfg.Default or false
-    local tooltip = cfg.Tooltip
-    local risky   = cfg.Risky   or false
-    local cbk     = cfg.Callback
+    local T         = Library.Theme
+    local text      = cfg.Text    or index
+    local value     = (cfg.Default ~= nil) and cfg.Default or false
+    local tooltip   = cfg.Tooltip
+    local risky     = cfg.Risky   or false
+    local cbk       = cfg.Callback
     local listeners = {}
 
-    -- Row frame
     local row = New("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 30),
+        Size                   = UDim2.new(1, 0, 0, 30),
     })
-
     New("TextLabel", {
-        Text           = text,
-        Font           = Enum.Font.Gotham,
-        TextSize       = 12,
-        TextColor3     = risky and T.Red or T.Text,
+        Text                   = text,
+        Font                   = Enum.Font.Gotham,
+        TextSize               = 12,
+        TextColor3             = risky and T.Red or T.Text,
         BackgroundTransparency = 1,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Size           = UDim2.new(1, -52, 1, 0),
-        Position       = UDim2.new(0, 2, 0, 0),
+        TextXAlignment         = Enum.TextXAlignment.Left,
+        Size                   = UDim2.new(1, -52, 1, 0),
+        Position               = UDim2.new(0, 2, 0, 0),
     }, row)
 
-    -- Track (background pill)
     local track = New("Frame", {
         BackgroundColor3 = value and T.ToggleOn or T.ToggleOff,
         BorderSizePixel  = 0,
@@ -398,7 +383,6 @@ function Groupbox:AddToggle(index, cfg)
     }, row)
     AddCorner(track, 10)
 
-    -- Knob
     local knob = New("Frame", {
         BackgroundColor3 = T.White,
         BorderSizePixel  = 0,
@@ -407,113 +391,18 @@ function Groupbox:AddToggle(index, cfg)
     }, track)
     AddCorner(knob, 7)
 
-    -- Invisible clickable overlay on full row
     local clickArea = New("TextButton", {
         BackgroundTransparency = 1,
-        Size   = UDim2.new(1, 0, 1, 0),
-        Text   = "",
-        ZIndex = 5,
+        Size                   = UDim2.new(1, 0, 1, 0),
+        Text                   = "",
+        ZIndex                 = 5,
     }, row)
-
     if tooltip then AttachTooltip(row, tooltip) end
 
     local function SetValue(v, silent)
         value = v
         Tween(track, { BackgroundColor3 = v and T.ToggleOn or T.ToggleOff }, 0.15)
-        Tween(knob,  { Position = v and UDim2.new(1,-17,0.5,-7) or UDim2.new(0,3,0.5,-7) }, 0.15)
-        if not silent then
-            if cbk then pcall(cbk, v) end
-            for _, fn in next, listeners do pcall(fn, v) end
-        end
-    end
-
-    clickArea.MouseButton1Click:Connect(function()
-        SetValue(not value)
-    end)
-
-    self:_AddElement(row)
-
-    local toggleObj = {
-        Value      = value,
-        _listeners = listeners,
-        _row       = row,
-        _setVal    = SetValue,
-    }
-    function toggleObj:SetValue(v) SetValue(v) end
-    function toggleObj:OnChanged(fn)
-        table.insert(listeners, fn)
-    end
-    -- Keep .Value synced
-    table.insert(listeners, function(v)
-        toggleObj.Value = v
-    end)
-
-    -- Sub-pickers can be attached to a toggle
-    function toggleObj:AddColorPicker(idx, pcfg)
-        return Groupbox.AddColorpicker(self._gb or Groupbox, idx, pcfg)
-    end
-    function toggleObj:AddKeyPicker(idx, pcfg)
-        return Groupbox.AddKeybind(self._gb or Groupbox, idx, pcfg)
-    end
-
-    Library.Toggles[index]        = toggleObj
-    return toggleObj
-end
-
--- ─── CHECKBOX ────────────────────────────────────────────────────────────────
-function Groupbox:AddCheckbox(index, cfg)
-    cfg = cfg or {}
-    local T       = Library.Theme
-    local text    = cfg.Text    or index
-    local value   = cfg.Default ~= nil and cfg.Default or false
-    local cbk     = cfg.Callback
-    local listeners = {}
-
-    local row = New("Frame", {
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 26),
-    })
-
-    local box = New("Frame", {
-        BackgroundColor3 = value and T.Accent or T.Element,
-        BorderSizePixel  = 0,
-        Size             = UDim2.new(0, 16, 0, 16),
-        Position         = UDim2.new(1, -20, 0.5, -8),
-    }, row)
-    AddCorner(box, 4)
-    AddStroke(box, T.GroupBorder, 1)
-
-    local check = New("TextLabel", {
-        Text           = "✓",
-        Font           = Enum.Font.GothamBold,
-        TextSize       = 11,
-        TextColor3     = T.White,
-        BackgroundTransparency = 1,
-        Size           = UDim2.new(1, 0, 1, 0),
-        Visible        = value,
-    }, box)
-
-    New("TextLabel", {
-        Text           = text,
-        Font           = Enum.Font.Gotham,
-        TextSize       = 12,
-        TextColor3     = T.Text,
-        BackgroundTransparency = 1,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Size           = UDim2.new(1, -28, 1, 0),
-        Position       = UDim2.new(0, 2, 0, 0),
-    }, row)
-
-    local clickArea = New("TextButton", {
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
-        Text = "", ZIndex = 5,
-    }, row)
-
-    local function SetValue(v, silent)
-        value = v
-        Tween(box, { BackgroundColor3 = v and T.Accent or T.Element }, 0.12)
-        check.Visible = v
+        Tween(knob, { Position = v and UDim2.new(1,-17,0.5,-7) or UDim2.new(0,3,0.5,-7) }, 0.15)
         if not silent then
             if cbk then pcall(cbk, v) end
             for _, fn in next, listeners do pcall(fn, v) end
@@ -527,87 +416,163 @@ function Groupbox:AddCheckbox(index, cfg)
     function obj:SetValue(v) SetValue(v) end
     function obj:OnChanged(fn) table.insert(listeners, fn) end
     table.insert(listeners, function(v) obj.Value = v end)
+
     Library.Toggles[index] = obj
     return obj
 end
 
--- ─── SLIDER ──────────────────────────────────────────────────────────────────
+function Groupbox:AddCheckbox(index, cfg)
+    cfg = cfg or {}
+    local T         = Library.Theme
+    local text      = cfg.Text    or index
+    local value     = (cfg.Default ~= nil) and cfg.Default or false
+    local cbk       = cfg.Callback
+    local listeners = {}
+
+    local row = New("Frame", {
+        BackgroundTransparency = 1,
+        Size                   = UDim2.new(1, 0, 0, 26),
+    })
+    local box = New("Frame", {
+        BackgroundColor3 = value and T.Accent or T.Element,
+        BorderSizePixel  = 0,
+        Size             = UDim2.new(0, 16, 0, 16),
+        Position         = UDim2.new(1, -20, 0.5, -8),
+    }, row)
+    AddCorner(box, 4)
+    AddStroke(box, T.GroupBorder, 1)
+
+    local check = New("TextLabel", {
+        Text                   = "v",
+        Font                   = Enum.Font.GothamBold,
+        TextSize               = 11,
+        TextColor3             = T.White,
+        BackgroundTransparency = 1,
+        Size                   = UDim2.new(1, 0, 1, 0),
+        Visible                = value,
+    }, box)
+    New("TextLabel", {
+        Text                   = text,
+        Font                   = Enum.Font.Gotham,
+        TextSize               = 12,
+        TextColor3             = T.Text,
+        BackgroundTransparency = 1,
+        TextXAlignment         = Enum.TextXAlignment.Left,
+        Size                   = UDim2.new(1, -28, 1, 0),
+        Position               = UDim2.new(0, 2, 0, 0),
+    }, row)
+
+    local clickArea = New("TextButton", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0), Text = "", ZIndex = 5,
+    }, row)
+
+    local function SetValue(v, silent)
+        value         = v
+        check.Visible = v
+        Tween(box, { BackgroundColor3 = v and T.Accent or T.Element }, 0.12)
+        if not silent then
+            if cbk then pcall(cbk, v) end
+            for _, fn in next, listeners do pcall(fn, v) end
+        end
+    end
+    clickArea.MouseButton1Click:Connect(function() SetValue(not value) end)
+    self:_AddElement(row)
+
+    local obj = { Value = value, _listeners = listeners }
+    function obj:SetValue(v) SetValue(v) end
+    function obj:OnChanged(fn) table.insert(listeners, fn) end
+    table.insert(listeners, function(v) obj.Value = v end)
+    Library.Toggles[index] = obj
+    return obj
+end
+
 function Groupbox:AddSlider(index, cfg)
     cfg = cfg or {}
-    local T        = Library.Theme
-    local text     = cfg.Text     or index
-    local min      = cfg.Min      or 0
-    local max      = cfg.Max      or 100
-    local default  = cfg.Default  ~= nil and cfg.Default or min
-    local rounding = cfg.Rounding ~= nil and cfg.Rounding or 0
-    local suffix   = cfg.Suffix   or ""
-    local cbk      = cfg.Callback
+    local T         = Library.Theme
+    local text      = cfg.Text     or index
+    local min       = cfg.Min      or 0
+    local max       = cfg.Max      or 100
+    local rounding  = (cfg.Rounding ~= nil) and cfg.Rounding or 0
+    local suffix    = cfg.Suffix   or ""
+    local cbk       = cfg.Callback
     local listeners = {}
-    local value    = math.clamp(default, min, max)
+    local value     = math.clamp((cfg.Default ~= nil) and cfg.Default or min, min, max)
 
-    -- Wrapper
     local wrapper = New("Frame", {
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 44),
+        BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 44),
     })
-
-    -- Header row
-    local header = New("Frame", {
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 16),
+    local hdr = New("Frame", {
+        BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 16),
     }, wrapper)
-
     New("TextLabel", {
-        Text           = text,
-        Font           = Enum.Font.Gotham,
-        TextSize       = 12,
-        TextColor3     = T.Text,
-        BackgroundTransparency = 1,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Size           = UDim2.new(0.6, 0, 1, 0),
-    }, header)
-
+        Text = text, Font = Enum.Font.Gotham, TextSize = 12,
+        TextColor3 = T.Text, BackgroundTransparency = 1,
+        TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(0.6,0,1,0),
+    }, hdr)
     local valLabel = New("TextLabel", {
-        Text           = RoundNum(value, rounding) .. suffix,
-        Font           = Enum.Font.GothamBold,
-        TextSize       = 11,
-        TextColor3     = T.Accent,
-        BackgroundTransparency = 1,
-        TextXAlignment = Enum.TextXAlignment.Right,
-        Size           = UDim2.new(0.4, 0, 1, 0),
-        Position       = UDim2.new(0.6, 0, 0, 0),
-    }, header)
+        Text = RoundNum(value, rounding) .. suffix,
+        Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = T.Accent,
+        BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Right,
+        Size = UDim2.new(0.4,0,1,0), Position = UDim2.new(0.6,0,0,0),
+    }, hdr)
 
-    -- Track
     local track = New("Frame", {
-        BackgroundColor3 = T.SliderBG,
-        BorderSizePixel  = 0,
-        Size             = UDim2.new(1, 0, 0, 8),
-        Position         = UDim2.new(0, 0, 0, 22),
+        BackgroundColor3 = T.SliderBG, BorderSizePixel = 0,
+        Size = UDim2.new(1,0,0,8), Position = UDim2.new(0,0,0,22),
     }, wrapper)
     AddCorner(track, 4)
 
-    -- Fill
-    local pct = (value - min) / math.max(max - min, 0.001)
+    local pct  = (value - min) / math.max(max - min, 0.001)
+    local pctC = math.max(0, math.min(1, pct))
+
     local fill = New("Frame", {
-        BackgroundColor3 = T.SliderFill,
-        BorderSizePixel  = 0,
-        Size             = UDim2.new(math.clamp(pct, 0, 1), 0, 1, 0),
+        BackgroundColor3 = T.SliderFill, BorderSizePixel = 0,
+        Size = UDim2.new(pctC, 0, 1, 0),
     }, track)
     AddCorner(fill, 4)
 
-    -- Thumb
     local thumb = New("Frame", {
-        BackgroundColor3 = T.White,
-        BorderSizePixel  = 0,
-        Size             = UDim2.new(0, 14, 0, 14),
-        Position         = UDim2.new(math.clamp(pct, 0, 1), -7, 0.5, -7),
-        ZIndex           = 3,
+        BackgroundColor3 = T.White, BorderSizePixel = 0,
+        Size = UDim2.new(0,14,0,14), Position = UDim2.new(pctC,-7,0.5,-7), ZIndex = 3,
     }, track)
     AddCorner(thumb, 7)
 
-    -- Click zone
-    local clickZone = New("TextButton", {
-        BackgroundTransparency = 1,
-        Size   = UDim2.new(1, 0, 0, 20),
-        Position = UDim
+    local cz = New("TextButton", {
+        BackgroundTransparency = 1, Size = UDim2.new(1,0,0,20),
+        Position = UDim2.new(0,0,0,-6), Text = "", ZIndex = 4,
+    }, track)
+
+    local function SetValue(v, silent)
+        value = math.clamp(RoundNum(v, rounding), min, max)
+        local p  = (value - min) / math.max(max - min, 0.001)
+        local pc = math.max(0, math.min(1, p))
+        Tween(fill,  { Size     = UDim2.new(pc, 0, 1, 0)     }, 0.05)
+        Tween(thumb, { Position = UDim2.new(pc, -7, 0.5, -7) }, 0.05)
+        valLabel.Text = RoundNum(value, rounding) .. suffix
+        if not silent then
+            if cbk then pcall(cbk, value) end
+            for _, fn in next, listeners do pcall(fn, value) end
+        end
+    end
+
+    local dragging = false
+    local function UpdateFromInput(input)
+        local rel = (input.Position.X - track.AbsolutePosition.X)
+                  / math.max(track.AbsoluteSize.X, 1)
+        rel = math.max(0, math.min(1, rel))
+        SetValue(min + rel * (max - min))
+    end
+
+    cz.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            UpdateFromInput(i)
+        end
+    end)
+    cz.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+    UIS.InputChanged:Connect(function(i)
+        if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+        
